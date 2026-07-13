@@ -33,35 +33,38 @@ Your holstered items are saved with your player, so they persist across sessions
 While an item is holstered, a small **non-pickable display model** appears at the
 matching back/hip point and follows you, visible to everyone.
 
-Weapons are being upgraded from flat placeholders to real **3D models**:
+Holstered items use the **real in-game item art**. Every vanilla tool and weapon
+maps to its actual texture, so a diamond sword shows the diamond sword, a
+netherite pickaxe shows the netherite pickaxe, and so on.
 
-- **Swords** render as a full 3D model, with the blade **textured by material
-  tier** (wood, stone, iron, gold, diamond, netherite) detected from the item id —
-  so a diamond sword looks diamond, a netherite sword looks netherite, etc.
-- **Other categories** (axe, bow, crossbow, trident, gun, generic) still use the
-  flat category silhouette for now, and are next in line for 3D models.
+**Covered vanilla items** (all material tiers where applicable — wood, stone,
+iron, gold, diamond, netherite):
 
-Because Bedrock can't draw an arbitrary item's exact model on the body (and a real
-floating item would just get picked back up), the display picks its model by
-**weapon category** (and, for swords, material tier):
-
-| Category | Matches item ids containing… |
+| | |
 | --- | --- |
-| Sword | sword, blade, dagger, katana, machete, saber, scimitar, knife, cutlass |
-| Axe | axe, hatchet, tomahawk (pickaxes excluded) |
-| Bow | bow |
-| Crossbow | crossbow |
-| Trident | trident, spear, lance, javelin, glaive, halberd |
-| Gun | gun, rifle, pistol, blaster, smg, shotgun, launcher, cannon, revolver |
-| Generic | anything else (default fallback) |
+| Swords | ✅ |
+| Pickaxes | ✅ |
+| Axes | ✅ |
+| Shovels | ✅ |
+| Hoes | ✅ |
+| Bow / Crossbow / Trident / Mace | ✅ |
 
-This is what lets **add-on weapons** still show a sensible shape — a modded
-`cool_addon:plasma_rifle` matches "rifle" → gun silhouette. Anything unrecognised
-shows the generic blade emblem.
+**Add-on & unknown items** can't be referenced by a pack (their texture paths
+aren't knowable), so they fall back to the closest category's standard look — e.g.
+a modded `cool_addon:ruby_sword` shows the iron sword, `plasma_rifle` shows a
+generic gun, and anything unrecognised shows a generic emblem.
 
-**Want an exact 3D model for a specific weapon?** That can be layered on later by
-adding a real model + a category id for it — the system is built to extend. Ask
-and I'll wire up whichever weapons you care about.
+**How it works:** Bedrock can't attach an arbitrary item's exact mesh to the
+player, and a real floating item would get picked back up. So the display is a
+thin card showing the item's genuine texture (with a slight thickness for depth).
+The `typeId → texture` table lives in `holster_bp/scripts/models.js` and the
+matching resource-pack texture array is generated alongside it — adding more items
+is just extending that list.
+
+> If any vanilla item shows a missing-texture (pink/black) card, its texture path
+> needs a tweak in the generated files — the vanilla texture filenames are the one
+> thing that can't be verified without the game. Report which item and it's a
+> one-line fix.
 
 ---
 
@@ -134,15 +137,14 @@ needed.
 holster_bp/                         Behavior pack (logic)
   manifest.json
   scripts/main.js                   Holsters, menu, sneak input, display control
+  scripts/models.js                 Generated typeId → texture-index lookup
   entities/holster_display.json     Inert, non-pickable display entity
 holster_rp/                         Resource pack (visuals)
   manifest.json
-  entity/holster_display.entity.json
-  render_controllers/…              Picks the texture by weapon category
-  models/entity/holster_display.geo.json   Flat plate (non-sword categories)
-  models/entity/holster_sword.geo.json      3D sword model
-  textures/entity/holster/sword_*.png       Sword material tiers (wood..netherite)
-  textures/entity/holster/*.png             Flat silhouettes (other categories)
+  entity/holster_display.entity.json    Item textures (vanilla paths + fallbacks)
+  render_controllers/…                  Picks the texture by holster:model index
+  models/entity/holster_display.geo.json   Thin display card
+  textures/entity/holster/generic.png, gun.png   Fallback art for non-vanilla items
 dist/
   BackAndHipHolsters.mcaddon        One-click install (both packs)
 ```

@@ -3,27 +3,57 @@
   "minecraft:client_entity": {
     "description": {
       "identifier": "holster:display",
-      "materials": { "default": "entity_alphatest" },
+      "materials": {
+        "default": "entity_alphatest"
+      },
       "textures": {
-        "sword_wood": "textures/entity/holster/sword_wood",
-        "sword_stone": "textures/entity/holster/sword_stone",
-        "sword_iron": "textures/entity/holster/sword_iron",
-        "sword_gold": "textures/entity/holster/sword_gold",
-        "sword_diamond": "textures/entity/holster/sword_diamond",
-        "sword_netherite": "textures/entity/holster/sword_netherite",
-        "axe": "textures/entity/holster/axe",
-        "bow": "textures/entity/holster/bow",
-        "crossbow": "textures/entity/holster/crossbow",
-        "trident": "textures/entity/holster/trident",
-        "gun": "textures/entity/holster/gun",
-        "generic": "textures/entity/holster/generic"
+        "sword_wood": "textures/items/wood_sword",
+        "sword_stone": "textures/items/stone_sword",
+        "sword_iron": "textures/items/iron_sword",
+        "sword_gold": "textures/items/gold_sword",
+        "sword_diamond": "textures/items/diamond_sword",
+        "sword_netherite": "textures/items/netherite_sword",
+        "pickaxe_wood": "textures/items/wood_pickaxe",
+        "pickaxe_stone": "textures/items/stone_pickaxe",
+        "pickaxe_iron": "textures/items/iron_pickaxe",
+        "pickaxe_gold": "textures/items/gold_pickaxe",
+        "pickaxe_diamond": "textures/items/diamond_pickaxe",
+        "pickaxe_netherite": "textures/items/netherite_pickaxe",
+        "axe_wood": "textures/items/wood_axe",
+        "axe_stone": "textures/items/stone_axe",
+        "axe_iron": "textures/items/iron_axe",
+        "axe_gold": "textures/items/gold_axe",
+        "axe_diamond": "textures/items/diamond_axe",
+        "axe_netherite": "textures/items/netherite_axe",
+        "shovel_wood": "textures/items/wood_shovel",
+        "shovel_stone": "textures/items/stone_shovel",
+        "shovel_iron": "textures/items/iron_shovel",
+        "shovel_gold": "textures/items/gold_shovel",
+        "shovel_diamond": "textures/items/diamond_shovel",
+        "shovel_netherite": "textures/items/netherite_shovel",
+        "hoe_wood": "textures/items/wood_hoe",
+        "hoe_stone": "textures/items/stone_hoe",
+        "hoe_iron": "textures/items/iron_hoe",
+        "hoe_gold": "textures/items/gold_hoe",
+        "hoe_diamond": "textures/items/diamond_hoe",
+        "hoe_netherite": "textures/items/netherite_hoe",
+        "bow": "textures/items/bow_standby",
+        "crossbow": "textures/items/crossbow_standby",
+        "trident": "textures/items/trident",
+        "mace": "textures/items/mace",
+        "fb_generic": "textures/entity/holster/generic",
+        "fb_gun": "textures/entity/holster/gun"
       },
       "geometry": {
-        "flat": "geometry.holster_display",
-        "sword": "geometry.holster_sword"
+        "default": "geometry.holster_display"
       },
-      "render_controllers": ["controller.render.holster_display"],
-      "spawn_egg": { "base_color": "#7a5a2d", "overlay_color": "#d2b46e" }
+      "render_controllers": [
+        "controller.render.holster_display"
+      ],
+      "spawn_egg": {
+        "base_color": "#7a5a2d",
+        "overlay_color": "#d2b46e"
+      }
     }
   }
 }

@@ -23,6 +23,7 @@
 
 import { world, system, ItemStack, EnchantmentTypes } from "@minecraft/server";
 import { ActionFormData } from "@minecraft/server-ui";
+import { MODEL, fallbackIndex } from "./models.js";
 
 // ----------------------------- Config --------------------------------------
 
@@ -152,21 +153,12 @@ function categoryOf(typeId) {
   return CAT.generic;
 }
 
-// Material tier for models that vary by material (currently the sword). Order
-// must match the render controller's sword texture array: 0 wood .. 5 netherite.
-const TIER = { wood: 0, stone: 1, iron: 2, gold: 3, diamond: 4, netherite: 5 };
-
-// Guess a weapon's material from its typeId. Defaults to iron so unknown/add-on
-// weapons get a neutral steel look rather than nothing.
-function tierOf(typeId) {
-  const id = (typeId || "").toLowerCase();
-  if (id.includes("netherite")) return TIER.netherite;
-  if (id.includes("diamond")) return TIER.diamond;
-  if (id.includes("gold")) return TIER.gold; // covers "golden" too
-  if (id.includes("iron")) return TIER.iron;
-  if (id.includes("stone")) return TIER.stone;
-  if (id.includes("wood")) return TIER.wood; // covers "wooden" too
-  return TIER.iron;
+// Which display texture an item should use. Vanilla items map to their REAL
+// in-game texture; anything else (add-on weapons, unknown tools) falls back to
+// the closest category's standard look.
+function modelIndexOf(typeId) {
+  const exact = MODEL[typeId];
+  return exact !== undefined ? exact : fallbackIndex(typeId);
 }
 
 // A stored item is a "weapon" if we can categorise it as one (used only when
@@ -311,7 +303,7 @@ function handleSlotTap(player, index) {
 // --------------------------- On-body display entities ----------------------
 
 // Runtime only (rebuilt on join / boot):
-const slotCache = new Map();  // playerId -> [categoryInt | null] * SLOT_COUNT
+const slotCache = new Map();  // playerId -> [modelIndex | null] * SLOT_COUNT
 const displays = new Map();   // playerId -> [Entity | undefined]   * SLOT_COUNT
 const bodyYawState = new Map(); // playerId -> tracked body yaw (degrees)
 
@@ -349,13 +341,11 @@ function updateBodyYaw(player) {
 }
 
 function refreshCache(player, slots) {
-  const cats = new Array(SLOT_COUNT).fill(null);
+  const models = new Array(SLOT_COUNT).fill(null);
   for (let i = 0; i < SLOT_COUNT; i++) {
-    cats[i] = slots[i]
-      ? { cat: categoryOf(slots[i].typeId), tier: tierOf(slots[i].typeId) }
-      : null;
+    models[i] = slots[i] ? modelIndexOf(slots[i].typeId) : null;
   }
-  slotCache.set(player.id, cats);
+  slotCache.set(player.id, models);
 }
 
 // Rotate a (forward,right) offset by the player's yaw into a world offset.
@@ -430,8 +420,7 @@ function maintainDisplays(player) {
       }
     }
 
-    try { ent.setProperty("holster:category", wanted.cat); } catch (_) {}
-    try { ent.setProperty("holster:tier", wanted.tier); } catch (_) {}
+    try { ent.setProperty("holster:model", wanted); } catch (_) {}
     try {
       ent.teleport(target, { rotation: { x: pitch, y: bodyYaw + CONFIG.slots[i].yaw } });
     } catch (_) {}

@@ -3,17 +3,6 @@
   "render_controllers": {
     "controller.render.holster_display": {
       "arrays": {
-        "geometries": {
-          "Array.geos": [
-            "Geometry.sword",
-            "Geometry.flat",
-            "Geometry.flat",
-            "Geometry.flat",
-            "Geometry.flat",
-            "Geometry.flat",
-            "Geometry.flat"
-          ]
-        },
         "textures": {
           "Array.skins": [
             "Texture.sword_wood",
@@ -22,19 +11,47 @@
             "Texture.sword_gold",
             "Texture.sword_diamond",
             "Texture.sword_netherite",
-            "Texture.axe",
+            "Texture.pickaxe_wood",
+            "Texture.pickaxe_stone",
+            "Texture.pickaxe_iron",
+            "Texture.pickaxe_gold",
+            "Texture.pickaxe_diamond",
+            "Texture.pickaxe_netherite",
+            "Texture.axe_wood",
+            "Texture.axe_stone",
+            "Texture.axe_iron",
+            "Texture.axe_gold",
+            "Texture.axe_diamond",
+            "Texture.axe_netherite",
+            "Texture.shovel_wood",
+            "Texture.shovel_stone",
+            "Texture.shovel_iron",
+            "Texture.shovel_gold",
+            "Texture.shovel_diamond",
+            "Texture.shovel_netherite",
+            "Texture.hoe_wood",
+            "Texture.hoe_stone",
+            "Texture.hoe_iron",
+            "Texture.hoe_gold",
+            "Texture.hoe_diamond",
+            "Texture.hoe_netherite",
             "Texture.bow",
             "Texture.crossbow",
             "Texture.trident",
-            "Texture.gun",
-            "Texture.generic"
+            "Texture.mace",
+            "Texture.fb_generic",
+            "Texture.fb_gun"
           ]
         }
       },
-      "geometry": "Array.geos[query.property('holster:category')]",
-      "materials": [{ "*": "Material.default" }],
+      "geometry": "Geometry.default",
+      "materials": [
+        {
+          "*": "Material.default"
+        }
+      ],
       "textures": [
-        "Array.skins[query.property('holster:category') == 0 ? query.property('holster:tier') : 5 + query.property('holster:category')]"
+        "Array.skins[query.property('holster:model')]"
       ]
     }
   }

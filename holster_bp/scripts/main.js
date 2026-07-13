@@ -152,6 +152,23 @@ function categoryOf(typeId) {
   return CAT.generic;
 }
 
+// Material tier for models that vary by material (currently the sword). Order
+// must match the render controller's sword texture array: 0 wood .. 5 netherite.
+const TIER = { wood: 0, stone: 1, iron: 2, gold: 3, diamond: 4, netherite: 5 };
+
+// Guess a weapon's material from its typeId. Defaults to iron so unknown/add-on
+// weapons get a neutral steel look rather than nothing.
+function tierOf(typeId) {
+  const id = (typeId || "").toLowerCase();
+  if (id.includes("netherite")) return TIER.netherite;
+  if (id.includes("diamond")) return TIER.diamond;
+  if (id.includes("gold")) return TIER.gold; // covers "golden" too
+  if (id.includes("iron")) return TIER.iron;
+  if (id.includes("stone")) return TIER.stone;
+  if (id.includes("wood")) return TIER.wood; // covers "wooden" too
+  return TIER.iron;
+}
+
 // A stored item is a "weapon" if we can categorise it as one (used only when
 // CONFIG.weaponsOnly is true). Unknown add-on items fall through as allowed.
 function isAllowed(item) {
@@ -334,7 +351,9 @@ function updateBodyYaw(player) {
 function refreshCache(player, slots) {
   const cats = new Array(SLOT_COUNT).fill(null);
   for (let i = 0; i < SLOT_COUNT; i++) {
-    cats[i] = slots[i] ? categoryOf(slots[i].typeId) : null;
+    cats[i] = slots[i]
+      ? { cat: categoryOf(slots[i].typeId), tier: tierOf(slots[i].typeId) }
+      : null;
   }
   slotCache.set(player.id, cats);
 }
@@ -411,7 +430,8 @@ function maintainDisplays(player) {
       }
     }
 
-    try { ent.setProperty("holster:category", wanted); } catch (_) {}
+    try { ent.setProperty("holster:category", wanted.cat); } catch (_) {}
+    try { ent.setProperty("holster:tier", wanted.tier); } catch (_) {}
     try {
       ent.teleport(target, { rotation: { x: pitch, y: bodyYaw + CONFIG.slots[i].yaw } });
     } catch (_) {}

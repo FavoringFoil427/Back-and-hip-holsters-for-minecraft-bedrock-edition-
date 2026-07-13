@@ -5,7 +5,12 @@
       "identifier": "holster:display",
       "materials": { "default": "entity_alphatest" },
       "textures": {
-        "sword": "textures/entity/holster/sword",
+        "sword_wood": "textures/entity/holster/sword_wood",
+        "sword_stone": "textures/entity/holster/sword_stone",
+        "sword_iron": "textures/entity/holster/sword_iron",
+        "sword_gold": "textures/entity/holster/sword_gold",
+        "sword_diamond": "textures/entity/holster/sword_diamond",
+        "sword_netherite": "textures/entity/holster/sword_netherite",
         "axe": "textures/entity/holster/axe",
         "bow": "textures/entity/holster/bow",
         "crossbow": "textures/entity/holster/crossbow",
@@ -13,7 +18,10 @@
         "gun": "textures/entity/holster/gun",
         "generic": "textures/entity/holster/generic"
       },
-      "geometry": { "default": "geometry.holster_display" },
+      "geometry": {
+        "flat": "geometry.holster_display",
+        "sword": "geometry.holster_sword"
+      },
       "render_controllers": ["controller.render.holster_display"],
       "spawn_egg": { "base_color": "#7a5a2d", "overlay_color": "#d2b46e" }
     }

@@ -12,6 +12,12 @@
           "range": [0, 6],
           "default": 6,
           "client_sync": true
+        },
+        "holster:tier": {
+          "type": "int",
+          "range": [0, 5],
+          "default": 2,
+          "client_sync": true
         }
       }
     },

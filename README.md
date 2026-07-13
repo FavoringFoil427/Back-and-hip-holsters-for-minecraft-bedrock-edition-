@@ -33,9 +33,17 @@ Your holstered items are saved with your player, so they persist across sessions
 While an item is holstered, a small **non-pickable display model** appears at the
 matching back/hip point and follows you, visible to everyone.
 
+Weapons are being upgraded from flat placeholders to real **3D models**:
+
+- **Swords** render as a full 3D model, with the blade **textured by material
+  tier** (wood, stone, iron, gold, diamond, netherite) detected from the item id —
+  so a diamond sword looks diamond, a netherite sword looks netherite, etc.
+- **Other categories** (axe, bow, crossbow, trident, gun, generic) still use the
+  flat category silhouette for now, and are next in line for 3D models.
+
 Because Bedrock can't draw an arbitrary item's exact model on the body (and a real
-floating item would just get picked back up), the display picks a **silhouette by
-weapon category**:
+floating item would just get picked back up), the display picks its model by
+**weapon category** (and, for swords, material tier):
 
 | Category | Matches item ids containing… |
 | --- | --- |
@@ -131,8 +139,10 @@ holster_rp/                         Resource pack (visuals)
   manifest.json
   entity/holster_display.entity.json
   render_controllers/…              Picks the texture by weapon category
-  models/entity/holster_display.geo.json
-  textures/entity/holster/*.png     One silhouette per category
+  models/entity/holster_display.geo.json   Flat plate (non-sword categories)
+  models/entity/holster_sword.geo.json      3D sword model
+  textures/entity/holster/sword_*.png       Sword material tiers (wood..netherite)
+  textures/entity/holster/*.png             Flat silhouettes (other categories)
 dist/
   BackAndHipHolsters.mcaddon        One-click install (both packs)
 ```

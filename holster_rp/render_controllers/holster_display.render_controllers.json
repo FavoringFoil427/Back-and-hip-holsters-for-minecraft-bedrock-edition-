@@ -3,9 +3,25 @@
   "render_controllers": {
     "controller.render.holster_display": {
       "arrays": {
+        "geometries": {
+          "Array.geos": [
+            "Geometry.sword",
+            "Geometry.flat",
+            "Geometry.flat",
+            "Geometry.flat",
+            "Geometry.flat",
+            "Geometry.flat",
+            "Geometry.flat"
+          ]
+        },
         "textures": {
           "Array.skins": [
-            "Texture.sword",
+            "Texture.sword_wood",
+            "Texture.sword_stone",
+            "Texture.sword_iron",
+            "Texture.sword_gold",
+            "Texture.sword_diamond",
+            "Texture.sword_netherite",
             "Texture.axe",
             "Texture.bow",
             "Texture.crossbow",
@@ -15,9 +31,11 @@
           ]
         }
       },
-      "geometry": "Geometry.default",
+      "geometry": "Array.geos[query.property('holster:category')]",
       "materials": [{ "*": "Material.default" }],
-      "textures": ["Array.skins[query.property('holster:category')]"]
+      "textures": [
+        "Array.skins[query.property('holster:category') == 0 ? query.property('holster:tier') : 5 + query.property('holster:category')]"
+      ]
     }
   }
 }

@@ -89,6 +89,8 @@ Open `holster_bp/scripts/main.js` and edit the `CONFIG` block at the top:
 | --- | --- | --- |
 | `slots` | Back L/R, Hip L/R with anchors | Slot names **and** where each model sits on the body (`forward`/`right`/`up`/`yaw`). Tune these in-game to line the models up. |
 | `lookaheadTicks` | `1.5` | Predicts your movement so the body models track tighter while running (less trailing). Higher = tighter but may overshoot on sudden stops; `0` disables it. |
+| `bodyTurnThreshold` | `45` | Models follow your **body**, not your head. Standing still, they only turn once your head twists past this many degrees (like the vanilla head/body split). Lower = they turn with you sooner. |
+| `sneak` | drop/forward/pitch | How far the models drop and tilt when you crouch, to stay flush with the hunched body. |
 | `doubleTapWindowTicks` | `8` | Max ticks (20 = 1s) between the two sneak taps. |
 | `weaponsOnly` | `false` | If `true`, only recognised weapons can be holstered. Leave `false` to allow any item (including add-on weapons). |
 | `showDisplays` | `true` | Set `false` for invisible holsters (menu only, no body models). |
@@ -110,8 +112,12 @@ needed.
 - The on-body model is a **category silhouette**, not the item's exact model — an
   intentional trade-off, because exact floating items get auto-picked-up and
   category models can't. See "Visible on the body" above.
-- The models follow the player's **head yaw**, so during heavy strafing they can
-  lag the torso slightly. Anchor offsets are all in `CONFIG.slots` for tuning.
+- To read as "attached," the models follow your **body** direction (not head),
+  match your **sneak crouch** (drop + tilt), and **predict your movement** so
+  they don't trail while running. All of this is tunable in `CONFIG`
+  (`bodyTurnThreshold`, `sneak`, `lookaheadTicks`) plus the per-slot anchors in
+  `CONFIG.slots`. There can still be a hair of motion on very fast direction
+  changes — that's the once-per-tick update limit of the Script API.
 - The trigger is a **double-tap of Sneak** because Bedrock has no custom-keybind API.
 
 ## Project layout

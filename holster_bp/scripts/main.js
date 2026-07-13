@@ -45,6 +45,15 @@ const CONFIG = {
   // but can overshoot on sudden stops. ~1.5 is a good balance. 0 disables it.
   lookaheadTicks: 1.5,
 
+  // The models follow the player's BODY (not head) direction, so glancing
+  // around doesn't swivel them. Body only turns when the head twists past this
+  // many degrees, or when the player moves — mirroring vanilla head/body split.
+  bodyTurnThreshold: 45,
+
+  // When sneaking, the player hunches: drop the models and tilt them so they
+  // stay flush with the crouched body. Tune to taste.
+  sneak: { drop: 0.22, forward: -0.06, pitch: 28 },
+
   // Max ticks (20 ticks = 1 second) allowed between the two sneak taps.
   doubleTapWindowTicks: 8,
 
@@ -287,6 +296,40 @@ function handleSlotTap(player, index) {
 // Runtime only (rebuilt on join / boot):
 const slotCache = new Map();  // playerId -> [categoryInt | null] * SLOT_COUNT
 const displays = new Map();   // playerId -> [Entity | undefined]   * SLOT_COUNT
+const bodyYawState = new Map(); // playerId -> tracked body yaw (degrees)
+
+// Shortest signed difference a-b, wrapped to [-180,180].
+function angleDiff(a, b) {
+  return ((((a - b) % 360) + 540) % 360) - 180;
+}
+
+// Approximate the player's BODY yaw from their HEAD yaw the way Minecraft does:
+// the body stays put while you glance around, and only turns to catch up once
+// the head twists past a threshold or the player is moving. Returns degrees.
+function updateBodyYaw(player) {
+  const head = player.getRotation().y;
+  let body = bodyYawState.get(player.id);
+  if (body === undefined) { body = head; bodyYawState.set(player.id, body); return body; }
+
+  let moving = false;
+  try {
+    const v = player.getVelocity();
+    moving = v.x * v.x + v.z * v.z > 0.0025; // ~0.05 blocks/tick
+  } catch (_) {}
+
+  const diff = angleDiff(head, body);
+  if (moving) {
+    // While walking/running the torso faces where you look — ease in quickly.
+    body += diff * 0.5;
+  } else if (Math.abs(diff) > CONFIG.bodyTurnThreshold) {
+    // Standing still: only drag the body along once the head passes the limit.
+    body = head - Math.sign(diff) * CONFIG.bodyTurnThreshold;
+  }
+  // else: keep the body exactly where it is (no jitter from tiny head moves).
+
+  bodyYawState.set(player.id, body);
+  return body;
+}
 
 function refreshCache(player, slots) {
   const cats = new Array(SLOT_COUNT).fill(null);
@@ -297,12 +340,15 @@ function refreshCache(player, slots) {
 }
 
 // Rotate a (forward,right) offset by the player's yaw into a world offset.
-function anchorLocation(player, slot) {
-  const yawDeg = player.getRotation().y;
-  const yaw = (yawDeg * Math.PI) / 180;
+function anchorLocation(player, slot, bodyYawDeg, sneaking) {
+  const yaw = (bodyYawDeg * Math.PI) / 180;
   const fx = -Math.sin(yaw), fz = Math.cos(yaw); // forward
   const rx = -fz, rz = fx;                        // player's right
   const loc = player.location;
+
+  // Match the hunched sneak pose so the models stay flush with the body.
+  const forward = slot.forward + (sneaking ? CONFIG.sneak.forward : 0);
+  const up = slot.up - (sneaking ? CONFIG.sneak.drop : 0);
 
   // Predict where the player is heading so the models don't trail while moving.
   let vx = 0, vy = 0, vz = 0;
@@ -316,9 +362,9 @@ function anchorLocation(player, slot) {
   }
 
   return {
-    x: loc.x + slot.forward * fx + slot.right * rx + vx,
-    y: loc.y + slot.up + vy,
-    z: loc.z + slot.forward * fz + slot.right * rz + vz,
+    x: loc.x + forward * fx + slot.right * rx + vx,
+    y: loc.y + up + vy,
+    z: loc.z + forward * fz + slot.right * rz + vz,
   };
 }
 
@@ -332,6 +378,9 @@ function maintainDisplays(player) {
   if (!disp) { disp = new Array(SLOT_COUNT).fill(undefined); displays.set(player.id, disp); }
 
   const dim = player.dimension;
+  const bodyYaw = updateBodyYaw(player);
+  const sneaking = player.isSneaking;
+  const pitch = sneaking ? CONFIG.sneak.pitch : 0;
 
   for (let i = 0; i < SLOT_COUNT; i++) {
     const wanted = cats[i];
@@ -349,7 +398,7 @@ function maintainDisplays(player) {
       continue;
     }
 
-    const target = anchorLocation(player, CONFIG.slots[i]);
+    const target = anchorLocation(player, CONFIG.slots[i], bodyYaw, sneaking);
 
     if (!ent) {
       try {
@@ -364,7 +413,7 @@ function maintainDisplays(player) {
 
     try { ent.setProperty("holster:category", wanted); } catch (_) {}
     try {
-      ent.teleport(target, { rotation: { x: 0, y: player.getRotation().y + CONFIG.slots[i].yaw } });
+      ent.teleport(target, { rotation: { x: pitch, y: bodyYaw + CONFIG.slots[i].yaw } });
     } catch (_) {}
   }
 }
@@ -376,6 +425,7 @@ function removeDisplaysFor(playerId) {
   }
   displays.delete(playerId);
   slotCache.delete(playerId);
+  bodyYawState.delete(playerId);
 }
 
 // Kill every display entity in every loaded dimension (used on boot so a

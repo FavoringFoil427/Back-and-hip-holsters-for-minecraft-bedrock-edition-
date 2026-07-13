@@ -42,9 +42,16 @@ const CONFIG = {
   ],
 
   // How many ticks ahead to predict the player's movement when placing the
-  // body models. Higher = the models track tighter while running (less trail),
-  // but can overshoot on sudden stops. ~1.5 is a good balance. 0 disables it.
-  lookaheadTicks: 1.5,
+  // body models. This is the main "make it look bone-attached" knob: it cancels
+  // both the display entity's render lag AND the client-side prediction of your
+  // own body, so the item lands ON you instead of trailing behind. Higher =
+  // tighter while moving, but more overshoot when you stop suddenly.
+  //   ~1.5 = gentle,  ~2.5 = tight (default),  3.5+ = very aggressive.
+  lookaheadTicks: 2.5,
+
+  // Safety cap (in blocks) on how far prediction may push the model from its
+  // resting anchor, so knockback / elytra / high speed can't fling it away.
+  maxLookaheadBlocks: 1.1,
 
   // The models follow the player's BODY (not head) direction, so glancing
   // around doesn't swivel them. Body only turns when the head twists past this
@@ -367,6 +374,11 @@ function anchorLocation(player, slot, bodyYawDeg, sneaking) {
       vx = v.x * CONFIG.lookaheadTicks;
       vy = v.y * CONFIG.lookaheadTicks;
       vz = v.z * CONFIG.lookaheadTicks;
+      // Clamp the prediction so extreme speeds can't fling the model away.
+      const cap = CONFIG.maxLookaheadBlocks;
+      const hmag = Math.hypot(vx, vz);
+      if (hmag > cap) { const s = cap / hmag; vx *= s; vz *= s; }
+      if (vy > cap) vy = cap; else if (vy < -cap) vy = -cap;
     } catch (_) {}
   }
 

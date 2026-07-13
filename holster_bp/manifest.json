@@ -4,7 +4,7 @@
     "name": "Back & Hip Holsters",
     "description": "§62 back slots + 2 hip slots that hold any weapon.\n§7Double-tap Sneak to open your holsters.",
     "uuid": "8b776642-c2ee-45d6-b15b-c7e346f0b916",
-    "version": [1, 1, 0],
+    "version": [1, 2, 0],
     "min_engine_version": [1, 21, 0]
   },
   "modules": [

@@ -40,6 +40,11 @@ const CONFIG = {
     { label: "Hip Right",  forward: -0.05, right: 0.36,  up: 0.95, yaw: 90 },
   ],
 
+  // How many ticks ahead to predict the player's movement when placing the
+  // body models. Higher = the models track tighter while running (less trail),
+  // but can overshoot on sudden stops. ~1.5 is a good balance. 0 disables it.
+  lookaheadTicks: 1.5,
+
   // Max ticks (20 ticks = 1 second) allowed between the two sneak taps.
   doubleTapWindowTicks: 8,
 
@@ -298,10 +303,22 @@ function anchorLocation(player, slot) {
   const fx = -Math.sin(yaw), fz = Math.cos(yaw); // forward
   const rx = -fz, rz = fx;                        // player's right
   const loc = player.location;
+
+  // Predict where the player is heading so the models don't trail while moving.
+  let vx = 0, vy = 0, vz = 0;
+  if (CONFIG.lookaheadTicks > 0) {
+    try {
+      const v = player.getVelocity();
+      vx = v.x * CONFIG.lookaheadTicks;
+      vy = v.y * CONFIG.lookaheadTicks;
+      vz = v.z * CONFIG.lookaheadTicks;
+    } catch (_) {}
+  }
+
   return {
-    x: loc.x + slot.forward * fx + slot.right * rx,
-    y: loc.y + slot.up,
-    z: loc.z + slot.forward * fz + slot.right * rz,
+    x: loc.x + slot.forward * fx + slot.right * rx + vx,
+    y: loc.y + slot.up + vy,
+    z: loc.z + slot.forward * fz + slot.right * rz + vz,
   };
 }
 

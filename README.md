@@ -88,6 +88,7 @@ Open `holster_bp/scripts/main.js` and edit the `CONFIG` block at the top:
 | Option | Default | What it does |
 | --- | --- | --- |
 | `slots` | Back L/R, Hip L/R with anchors | Slot names **and** where each model sits on the body (`forward`/`right`/`up`/`yaw`). Tune these in-game to line the models up. |
+| `lookaheadTicks` | `1.5` | Predicts your movement so the body models track tighter while running (less trailing). Higher = tighter but may overshoot on sudden stops; `0` disables it. |
 | `doubleTapWindowTicks` | `8` | Max ticks (20 = 1s) between the two sneak taps. |
 | `weaponsOnly` | `false` | If `true`, only recognised weapons can be holstered. Leave `false` to allow any item (including add-on weapons). |
 | `showDisplays` | `true` | Set `false` for invisible holsters (menu only, no body models). |

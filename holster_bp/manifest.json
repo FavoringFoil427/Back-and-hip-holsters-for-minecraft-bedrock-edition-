@@ -1,0 +1,35 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Back & Hip Holsters",
+    "description": "§62 back slots + 2 hip slots that hold any weapon.\n§7Double-tap Sneak to open your holsters.",
+    "uuid": "8b776642-c2ee-45d6-b15b-c7e346f0b916",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "type": "script",
+      "language": "javascript",
+      "uuid": "0eb5c4e6-5f15-4903-aeb9-413ed56a583f",
+      "version": [1, 0, 0],
+      "entry": "scripts/main.js"
+    }
+  ],
+  "dependencies": [
+    {
+      "module_name": "@minecraft/server",
+      "version": "1.14.0"
+    },
+    {
+      "module_name": "@minecraft/server-ui",
+      "version": "1.3.0"
+    }
+  ],
+  "metadata": {
+    "authors": ["FavoringFoil427"],
+    "generated_with": {
+      "holster_addon": ["1.0.0"]
+    }
+  }
+}

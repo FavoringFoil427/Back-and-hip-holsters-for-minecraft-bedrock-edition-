@@ -1,0 +1,21 @@
+{
+  "format_version": "1.10.0",
+  "minecraft:client_entity": {
+    "description": {
+      "identifier": "holster:display",
+      "materials": { "default": "entity_alphatest" },
+      "textures": {
+        "sword": "textures/entity/holster/sword",
+        "axe": "textures/entity/holster/axe",
+        "bow": "textures/entity/holster/bow",
+        "crossbow": "textures/entity/holster/crossbow",
+        "trident": "textures/entity/holster/trident",
+        "gun": "textures/entity/holster/gun",
+        "generic": "textures/entity/holster/generic"
+      },
+      "geometry": { "default": "geometry.holster_display" },
+      "render_controllers": ["controller.render.holster_display"],
+      "spawn_egg": { "base_color": "#7a5a2d", "overlay_color": "#d2b46e" }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "format_version": "1.10.0",
+  "render_controllers": {
+    "controller.render.holster_display": {
+      "arrays": {
+        "textures": {
+          "Array.skins": [
+            "Texture.sword",
+            "Texture.axe",
+            "Texture.bow",
+            "Texture.crossbow",
+            "Texture.trident",
+            "Texture.gun",
+            "Texture.generic"
+          ]
+        }
+      },
+      "geometry": "Geometry.default",
+      "materials": [{ "*": "Material.default" }],
+      "textures": ["Array.skins[query.property('holster:category')]"]
+    }
+  }
+}

@@ -10,13 +10,15 @@
  * stored (type, count, custom name, lore, enchantments and durability are
  * all preserved).
  *
+ * VISIBLE ON THE BODY: while an item is holstered, a small non-pickable
+ * "display" entity appears on the matching back/hip point and follows the
+ * player, so everyone can see what's sheathed. Its look is chosen by the
+ * weapon's CATEGORY (sword / axe / bow / crossbow / trident / gun / generic),
+ * which is what lets add-on weapons still show something recognisable.
+ *
  * "Keybind": Bedrock add-ons cannot register custom key bindings, so the
  * holster menu opens on a DOUBLE-TAP of the Sneak key (Shift on keyboard,
  * the crouch button on controller/touch). This works on every platform.
- *
- * In the menu, tapping a slot either:
- *   - stores the item currently in your hand (if the slot is empty), or
- *   - draws the stored item into your hand (swapping with whatever you hold).
  */
 
 import { world, system, ItemStack, EnchantmentTypes } from "@minecraft/server";
@@ -25,42 +27,43 @@ import { ActionFormData } from "@minecraft/server-ui";
 // ----------------------------- Config --------------------------------------
 
 const CONFIG = {
-  // Slots, in menu order. Change the labels here if you like.
-  slotLabels: ["Back Left", "Back Right", "Hip Left", "Hip Right"],
+  // Slots, in menu order. Each has a body anchor:
+  //   forward: + = in front of the player, - = behind
+  //   right:   + = player's right side,    - = left
+  //   up:      height above the player's feet, in blocks
+  //   yaw:     degrees added to the player's facing so the flat model faces out
+  // Tweak these numbers in-game to line the models up exactly how you like.
+  slots: [
+    { label: "Back Left",  forward: -0.28, right: -0.22, up: 1.35, yaw: 0 },
+    { label: "Back Right", forward: -0.28, right: 0.22,  up: 1.35, yaw: 0 },
+    { label: "Hip Left",   forward: -0.05, right: -0.36, up: 0.95, yaw: -90 },
+    { label: "Hip Right",  forward: -0.05, right: 0.36,  up: 0.95, yaw: 90 },
+  ],
 
   // Max ticks (20 ticks = 1 second) allowed between the two sneak taps.
   doubleTapWindowTicks: 8,
 
-  // Set to true to only allow storing recognised weapons (see WEAPON_HINTS).
+  // Set to true to only allow storing recognised weapons (see categoryOf()).
   // Leave false so ANY item — including add-on weapons — can be holstered.
   weaponsOnly: false,
+
+  // Show the on-body display entities. Set false for holsters with no visuals.
+  showDisplays: true,
 };
 
-const SLOT_COUNT = CONFIG.slotLabels.length;
+const SLOT_COUNT = CONFIG.slots.length;
 const DP_KEY = "holster:slots";
+const DISPLAY_ID = "holster:display";
 
-// Substrings used to guess whether an item is a weapon (only when
-// CONFIG.weaponsOnly is true). Add-on items usually still match on
-// "sword"/"bow"/"gun" etc.; anything unknown is allowed through anyway.
-const WEAPON_HINTS = [
-  "sword", "axe", "bow", "crossbow", "trident", "mace",
-  "gun", "rifle", "pistol", "dagger", "spear", "blade", "shield",
-];
+// Category ids must match the render controller texture array order in the
+// resource pack (Array.skins): 0 sword,1 axe,2 bow,3 crossbow,4 trident,5 gun,6 generic
+const CAT = { sword: 0, axe: 1, bow: 2, crossbow: 3, trident: 4, gun: 5, generic: 6 };
 
 // --------------------------- Item (de)serialisation ------------------------
 
-/**
- * Convert an ItemStack into a plain object we can save in a dynamic property.
- * Captures everything that normally matters for a weapon.
- */
 function serializeItem(item) {
   if (!item) return null;
-
-  const data = {
-    typeId: item.typeId,
-    amount: item.amount,
-  };
-
+  const data = { typeId: item.typeId, amount: item.amount };
   if (item.nameTag) data.name = item.nameTag;
 
   const lore = item.getLore?.();
@@ -69,48 +72,28 @@ function serializeItem(item) {
   try {
     const ench = item.getComponent("minecraft:enchantable");
     if (ench) {
-      data.enchants = ench.getEnchantments().map((e) => ({
-        id: e.type.id,
-        level: e.level,
-      }));
+      data.enchants = ench.getEnchantments().map((e) => ({ id: e.type.id, level: e.level }));
     }
-  } catch (_) {
-    /* item has no enchantable component — ignore */
-  }
+  } catch (_) {}
 
   try {
     const dur = item.getComponent("minecraft:durability");
     if (dur) data.damage = dur.damage;
-  } catch (_) {
-    /* item has no durability component — ignore */
-  }
+  } catch (_) {}
 
   return data;
 }
 
-/**
- * Rebuild an ItemStack from serialized data. Any piece that fails to restore
- * (e.g. an enchantment id that no longer exists) is skipped rather than
- * breaking the whole draw.
- */
 function deserializeItem(data) {
   if (!data) return undefined;
-
   let item;
   try {
     item = new ItemStack(data.typeId, data.amount ?? 1);
   } catch (_) {
-    // The item type is gone (add-on removed?). Nothing we can safely give back.
     return undefined;
   }
-
-  if (data.name) {
-    try { item.nameTag = data.name; } catch (_) {}
-  }
-
-  if (data.lore) {
-    try { item.setLore(data.lore); } catch (_) {}
-  }
+  if (data.name) { try { item.nameTag = data.name; } catch (_) {} }
+  if (data.lore) { try { item.setLore(data.lore); } catch (_) {} }
 
   if (data.enchants?.length) {
     try {
@@ -120,9 +103,7 @@ function deserializeItem(data) {
           try {
             const type = EnchantmentTypes.get(e.id);
             if (type) ench.addEnchantment({ type, level: e.level });
-          } catch (_) {
-            /* skip a single bad enchantment */
-          }
+          } catch (_) {}
         }
       }
     } catch (_) {}
@@ -134,8 +115,35 @@ function deserializeItem(data) {
       if (dur) dur.damage = Math.min(data.damage, dur.maxDurability);
     } catch (_) {}
   }
-
   return item;
+}
+
+// ------------------------------ Weapon category ----------------------------
+
+// Decide which display model a stored item should use, purely from its typeId,
+// so add-on weapons still map to a sensible silhouette.
+function categoryOf(typeId) {
+  const id = (typeId || "").toLowerCase();
+  const has = (...s) => s.some((x) => id.includes(x));
+
+  if (has("crossbow")) return CAT.crossbow;
+  if (has("bow")) return CAT.bow;
+  if (has("trident", "spear", "lance", "javelin", "glaive", "halberd")) return CAT.trident;
+  if (has("gun", "rifle", "pistol", "blaster", "smg", "shotgun", "launcher", "cannon", "revolver"))
+    return CAT.gun;
+  if (has("pickaxe")) return CAT.generic; // don't treat picks as axes
+  if (has("axe", "hatchet", "tomahawk")) return CAT.axe;
+  if (has("sword", "blade", "dagger", "katana", "machete", "saber", "scimitar", "knife", "cutlass"))
+    return CAT.sword;
+  return CAT.generic;
+}
+
+// A stored item is a "weapon" if we can categorise it as one (used only when
+// CONFIG.weaponsOnly is true). Unknown add-on items fall through as allowed.
+function isAllowed(item) {
+  if (!item) return false;
+  if (!CONFIG.weaponsOnly) return true;
+  return categoryOf(item.typeId) !== CAT.generic;
 }
 
 // ------------------------------ Slot storage -------------------------------
@@ -146,7 +154,6 @@ function loadSlots(player) {
     try {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        // Normalise length in case SLOT_COUNT changed between versions.
         const out = new Array(SLOT_COUNT).fill(null);
         for (let i = 0; i < SLOT_COUNT; i++) out[i] = parsed[i] ?? null;
         return out;
@@ -163,7 +170,6 @@ function saveSlots(player, slots) {
 // ------------------------------ Held-item helpers --------------------------
 
 function getSelectedIndex(player) {
-  // API renamed the property across versions; support both.
   const idx = player.selectedSlotIndex ?? player.selectedSlot;
   return typeof idx === "number" ? idx : 0;
 }
@@ -173,16 +179,20 @@ function getHandContainer(player) {
   return inv?.container;
 }
 
-function isWeapon(item) {
-  if (!item) return false;
-  if (!CONFIG.weaponsOnly) return true;
-  const id = item.typeId.toLowerCase();
-  return WEAPON_HINTS.some((h) => id.includes(h));
+// isValid changed from a method to a getter across API versions; support both.
+function valid(entity) {
+  if (!entity) return false;
+  try {
+    const v = entity.isValid;
+    return typeof v === "function" ? entity.isValid() : !!v;
+  } catch (_) {
+    return false;
+  }
 }
 
 // --------------------------------- Menu ------------------------------------
 
-const busy = new Set(); // player ids that currently have the menu open
+const busy = new Set();
 
 function describeSlot(data) {
   if (!data) return "§8[ empty ]";
@@ -193,10 +203,7 @@ function describeSlot(data) {
 }
 
 function prettyId(typeId) {
-  return typeId
-    .replace(/^.*:/, "")
-    .replace(/_/g, " ")
-    .replace(/\b\w/g, (c) => c.toUpperCase());
+  return typeId.replace(/^.*:/, "").replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function openHolsterMenu(player) {
@@ -217,7 +224,7 @@ function openHolsterMenu(player) {
     );
 
   for (let i = 0; i < SLOT_COUNT; i++) {
-    form.button(`§6${CONFIG.slotLabels[i]}\n${describeSlot(slots[i])}`);
+    form.button(`§6${CONFIG.slots[i].label}\n${describeSlot(slots[i])}`);
   }
 
   form
@@ -225,9 +232,7 @@ function openHolsterMenu(player) {
     .then((res) => {
       busy.delete(player.id);
       if (res.canceled) return;
-      if (typeof res.selection === "number") {
-        handleSlotTap(player, res.selection);
-      }
+      if (typeof res.selection === "number") handleSlotTap(player, res.selection);
     })
     .catch(() => busy.delete(player.id));
 }
@@ -240,28 +245,27 @@ function handleSlotTap(player, index) {
   const handIdx = getSelectedIndex(player);
   const held = container.getItem(handIdx);
   const stored = slots[index];
-  const label = CONFIG.slotLabels[index];
+  const label = CONFIG.slots[index].label;
 
   if (!stored) {
-    // Slot empty → holster whatever is in hand.
     if (!held) {
       player.sendMessage("§7Your hand is empty — nothing to holster.");
       return;
     }
-    if (!isWeapon(held)) {
+    if (!isAllowed(held)) {
       player.sendMessage("§cOnly weapons can be holstered.");
       return;
     }
     slots[index] = serializeItem(held);
-    container.setItem(handIdx, undefined); // clear hand
+    container.setItem(handIdx, undefined);
     player.sendMessage(`§aHolstered §f${describeSlot(slots[index])} §ain ${label}.`);
   } else {
-    // Slot occupied → draw it, swapping with whatever is in hand.
     const drawn = deserializeItem(stored);
     if (!drawn) {
       player.sendMessage("§cThat stored item could no longer be restored.");
       slots[index] = null;
       saveSlots(player, slots);
+      refreshCache(player, slots);
       return;
     }
     container.setItem(handIdx, drawn);
@@ -270,53 +274,153 @@ function handleSlotTap(player, index) {
   }
 
   saveSlots(player, slots);
+  refreshCache(player, slots);
 }
 
-// --------------------------- Double-tap Sneak input ------------------------
+// --------------------------- On-body display entities ----------------------
 
-// Per-player edge-detection state for the sneak key.
-const sneakState = new Map(); // id -> { down: bool, lastTapTick: number }
+// Runtime only (rebuilt on join / boot):
+const slotCache = new Map();  // playerId -> [categoryInt | null] * SLOT_COUNT
+const displays = new Map();   // playerId -> [Entity | undefined]   * SLOT_COUNT
+
+function refreshCache(player, slots) {
+  const cats = new Array(SLOT_COUNT).fill(null);
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    cats[i] = slots[i] ? categoryOf(slots[i].typeId) : null;
+  }
+  slotCache.set(player.id, cats);
+}
+
+// Rotate a (forward,right) offset by the player's yaw into a world offset.
+function anchorLocation(player, slot) {
+  const yawDeg = player.getRotation().y;
+  const yaw = (yawDeg * Math.PI) / 180;
+  const fx = -Math.sin(yaw), fz = Math.cos(yaw); // forward
+  const rx = -fz, rz = fx;                        // player's right
+  const loc = player.location;
+  return {
+    x: loc.x + slot.forward * fx + slot.right * rx,
+    y: loc.y + slot.up,
+    z: loc.z + slot.forward * fz + slot.right * rz,
+  };
+}
+
+function maintainDisplays(player) {
+  if (!CONFIG.showDisplays) return;
+
+  let cats = slotCache.get(player.id);
+  if (!cats) { refreshCache(player, loadSlots(player)); cats = slotCache.get(player.id); }
+
+  let disp = displays.get(player.id);
+  if (!disp) { disp = new Array(SLOT_COUNT).fill(undefined); displays.set(player.id, disp); }
+
+  const dim = player.dimension;
+
+  for (let i = 0; i < SLOT_COUNT; i++) {
+    const wanted = cats[i];
+    let ent = disp[i];
+
+    // Drop an entity that has become invalid or ended up in another dimension.
+    if (ent && (!valid(ent) || ent.dimension?.id !== dim.id)) {
+      try { if (valid(ent)) ent.remove(); } catch (_) {}
+      ent = undefined;
+      disp[i] = undefined;
+    }
+
+    if (wanted === null) {
+      if (ent) { try { ent.remove(); } catch (_) {} disp[i] = undefined; }
+      continue;
+    }
+
+    const target = anchorLocation(player, CONFIG.slots[i]);
+
+    if (!ent) {
+      try {
+        ent = dim.spawnEntity(DISPLAY_ID, target);
+        ent.addTag("holster_disp");
+        ent.addTag(`howner_${player.id}`);
+        disp[i] = ent;
+      } catch (_) {
+        continue; // chunk not ready this tick; try again next tick
+      }
+    }
+
+    try { ent.setProperty("holster:category", wanted); } catch (_) {}
+    try {
+      ent.teleport(target, { rotation: { x: 0, y: player.getRotation().y + CONFIG.slots[i].yaw } });
+    } catch (_) {}
+  }
+}
+
+function removeDisplaysFor(playerId) {
+  const disp = displays.get(playerId);
+  if (disp) {
+    for (const e of disp) { try { if (valid(e)) e.remove(); } catch (_) {} }
+  }
+  displays.delete(playerId);
+  slotCache.delete(playerId);
+}
+
+// Kill every display entity in every loaded dimension (used on boot so a
+// reload never leaves orphaned models floating around).
+function purgeAllDisplays() {
+  for (const dim of [world.getDimension("overworld"), world.getDimension("nether"), world.getDimension("the_end")]) {
+    try {
+      for (const e of dim.getEntities({ type: DISPLAY_ID })) {
+        try { e.remove(); } catch (_) {}
+      }
+    } catch (_) {}
+  }
+}
+
+// --------------------------- Main tick: input + displays -------------------
+
+const sneakState = new Map(); // id -> { down, lastTapTick }
 
 system.runInterval(() => {
   const now = system.currentTick;
   for (const player of world.getAllPlayers()) {
+    // --- double-tap sneak detection ---
     const sneaking = player.isSneaking;
     let st = sneakState.get(player.id);
-    if (!st) {
-      st = { down: false, lastTapTick: -100 };
-      sneakState.set(player.id, st);
-    }
-
-    // Rising edge: key just went from up to down.
+    if (!st) { st = { down: false, lastTapTick: -100 }; sneakState.set(player.id, st); }
     if (sneaking && !st.down) {
       if (now - st.lastTapTick <= CONFIG.doubleTapWindowTicks) {
-        st.lastTapTick = -100; // consume, so a third tap doesn't re-trigger
+        st.lastTapTick = -100;
         openHolsterMenu(player);
       } else {
         st.lastTapTick = now;
       }
     }
     st.down = sneaking;
+
+    // --- keep the on-body models glued to the player ---
+    try { maintainDisplays(player); } catch (_) {}
   }
 }, 1);
 
-// -------------------------------- Cleanup ----------------------------------
+// -------------------------------- Lifecycle --------------------------------
 
 world.afterEvents.playerLeave.subscribe((ev) => {
   sneakState.delete(ev.playerId);
   busy.delete(ev.playerId);
-});
-
-// --------------------------------- Boot ------------------------------------
-
-world.afterEvents.worldInitialize?.subscribe(() => {
-  // no-op: dynamic properties are read lazily per player.
+  removeDisplaysFor(ev.playerId);
 });
 
 world.afterEvents.playerSpawn.subscribe((ev) => {
+  // Rebuild the runtime cache from saved data whenever a player (re)spawns.
+  refreshCache(ev.player, loadSlots(ev.player));
   if (ev.initialSpawn) {
     ev.player.sendMessage(
       "§6[Holsters] §7Double-tap §fSneak§7 to open your 2 back + 2 hip slots."
     );
+  }
+});
+
+// Clean slate on script boot, then let the tick loop respawn as needed.
+system.run(() => {
+  purgeAllDisplays();
+  for (const player of world.getAllPlayers()) {
+    refreshCache(player, loadSlots(player));
   }
 });

@@ -1,0 +1,20 @@
+{
+  "format_version": 2,
+  "header": {
+    "name": "Back & Hip Holsters (Resources)",
+    "description": "§7Body models for holstered weapons.\n§7Required by the Back & Hip Holsters behavior pack.",
+    "uuid": "fa442ffc-c406-4523-8e06-dff11e52e693",
+    "version": [1, 0, 0],
+    "min_engine_version": [1, 21, 0]
+  },
+  "modules": [
+    {
+      "type": "resources",
+      "uuid": "14789b0b-9a54-4b43-9f77-8e0c066a9f1f",
+      "version": [1, 0, 0]
+    }
+  ],
+  "metadata": {
+    "authors": ["FavoringFoil427"]
+  }
+}

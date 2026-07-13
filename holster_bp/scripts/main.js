@@ -36,8 +36,8 @@ const CONFIG = {
   slots: [
     { label: "Back Left",  forward: -0.28, right: -0.22, up: 1.35, yaw: 0 },
     { label: "Back Right", forward: -0.28, right: 0.22,  up: 1.35, yaw: 0 },
-    { label: "Hip Left",   forward: -0.05, right: -0.36, up: 0.95, yaw: -90 },
-    { label: "Hip Right",  forward: -0.05, right: 0.36,  up: 0.95, yaw: 90 },
+    { label: "Hip Left",   forward: -0.05, right: -0.36, up: 0.72, yaw: -90 },
+    { label: "Hip Right",  forward: -0.05, right: 0.36,  up: 0.72, yaw: 90 },
   ],
 
   // How many ticks ahead to predict the player's movement when placing the

@@ -46,8 +46,8 @@ const CONFIG = {
   // both the display entity's render lag AND the client-side prediction of your
   // own body, so the item lands ON you instead of trailing behind. Higher =
   // tighter while moving, but more overshoot when you stop suddenly.
-  //   ~1.5 = gentle,  ~2.5 = tight (default),  3.5+ = very aggressive.
-  lookaheadTicks: 2.5,
+  //   ~1.5 = gentle,  ~2.5 = tight,  3.5+ = very aggressive.
+  lookaheadTicks: 3.5,
 
   // Safety cap (in blocks) on how far prediction may push the model from its
   // resting anchor, so knockback / elytra / high speed can't fling it away.

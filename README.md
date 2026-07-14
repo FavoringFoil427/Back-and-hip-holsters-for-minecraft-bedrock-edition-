@@ -99,7 +99,7 @@ Open `holster_bp/scripts/main.js` and edit the `CONFIG` block at the top:
 | Option | Default | What it does |
 | --- | --- | --- |
 | `slots` | Back L/R, Hip L/R with anchors | Slot names **and** where each model sits on the body (`forward`/`right`/`up`/`yaw`). Tune these in-game to line the models up. |
-| `lookaheadTicks` | `2.5` | **Main "make it look attached" knob.** Predicts your movement to cancel the display's render lag and your body's client-side prediction, so the item lands on you instead of trailing. Higher = tighter while moving, more overshoot on sudden stops (~1.5 gentle, ~2.5 tight, 3.5+ aggressive); `0` disables it. |
+| `lookaheadTicks` | `3.5` | **Main "make it look attached" knob.** Predicts your movement to cancel the display's render lag and your body's client-side prediction, so the item lands on you instead of trailing. Higher = tighter while moving, more overshoot on sudden stops (~1.5 gentle, ~2.5 tight, 3.5+ aggressive); `0` disables it. |
 | `maxLookaheadBlocks` | `1.1` | Safety cap so knockback / elytra / high speed can't fling the model off your body. |
 | `bodyTurnThreshold` | `45` | Models follow your **body**, not your head. Standing still, they only turn once your head twists past this many degrees (like the vanilla head/body split). Lower = they turn with you sooner. |
 | `sneak` | drop/forward/pitch | How far the models drop and tilt when you crouch, to stay flush with the hunched body. |
